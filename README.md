@@ -2,7 +2,7 @@
 
 Check out on the App store: https://studio.lyzr.ai/create-new-agent/6a84a4e6d468c8c0411988c7?tab=playground&public=true
 
-**A managerial-orchestration cookbook, including what broke and how I found it.**
+**A managerial-orchestration cookbook.**
 
 ---
 
