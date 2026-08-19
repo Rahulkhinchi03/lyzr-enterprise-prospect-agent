@@ -2,7 +2,9 @@
 
 **A managerial-orchestration cookbook.**
 
-Check out on the App store: https://studio.lyzr.ai/create-new-agent/6a84a4e6d468c8c0411988c7?tab=playground&public=true
+*Four agents. One Manager. One Knowledge Base. Built and tested on Lyzr Studio.*
+
+**[Try it live on Lyzr Studio →](https://studio.lyzr.ai/create-new-agent/6a84a4e6d468c8c0411988c7?tab=playground&public=true)**
 
 ---
 
@@ -11,6 +13,25 @@ Check out on the App store: https://studio.lyzr.ai/create-new-agent/6a84a4e6d468
 I built a four-agent system on Lyzr Studio that takes a target company name and returns a full enterprise prospect research brief: firmographics, buying signals, likely stakeholders, pain points mapped to specific Lyzr capabilities, an outreach angle, and discovery questions. One Manager delegates to three specialist workers, one of which is grounded in a Knowledge Base built from Lyzr's own product content.
 
 Getting all four agents built and wired took a fraction of the effort. Almost everything else here went into testing it against real companies, and that's the part of this cookbook worth actually reading. I caught a hallucinated headcount, a knowledge base with duplicate and missing sources, a citation format that looked trustworthy but wasn't, and a compilation step that silently dropped the one safety mechanism I'd built. I also flagged something as a fabrication that turned out to be true, twice, because my own verification process was stale. That mistake is in here too, because it's a better lesson than any of the ones where I was right.
+
+---
+
+## Contents
+
+- [Why Managerial Orchestration Fits This Problem](#why-managerial-orchestration-fits-this-problem)
+- [Architecture at a Glance](#architecture-at-a-glance)
+- [Prerequisites](#prerequisites)
+- [Part 1: The Manager](#part-1-the-manager)
+- [Part 2: Company Intelligence Agent](#part-2-company-intelligence-agent)
+- [Part 3: Signal & Stakeholder Mapping Agent](#part-3-signal--stakeholder-mapping-agent)
+- [Part 4: The Knowledge Base](#part-4-the-knowledge-base)
+- [Part 5: Positioning & Brief Writer Agent](#part-5-positioning--brief-writer-agent)
+- [Part 6: Wiring the Manager](#part-6-wiring-the-manager)
+- [Part 7: Deploying and Sharing It](#part-7-deploying-and-sharing-it)
+- [Known Limitations, Documented on Purpose](#known-limitations-documented-on-purpose)
+- [Sample Output](#sample-output)
+- [Where This Goes Next](#where-this-goes-next)
+- [Appendix: Full Config Reference](#appendix-full-config-reference)
 
 ---
 
@@ -49,13 +70,16 @@ Mapped Pain Points & Lyzr Fit, Outreach Angle, Discovery Questions
 The Manager doesn't do any research itself. It delegates, waits for both workers to return, passes their combined output to the Positioning agent, then compiles everything into one document. Company Intelligence and Signal & Stakeholder Mapping run independently, both grounded in live web search. Positioning is the only agent with Knowledge Base access, and it only synthesizes, it never searches the web itself.
 
 <img width="1512" height="826" alt="Dashboard" src="https://github.com/user-attachments/assets/f7a00ab0-902e-4f9c-9a35-0679df2959b8" />
+
 ---
 
 ## Prerequisites
 
 - A Lyzr Studio account (studio.lyzr.ai)
 - A web-search tool connector available in your Tools catalog. I used `composio_search`.
-- Awareness of your credit budget. Every full pipeline run calls four agents plus a knowledge base retrieval in one shot, that adds up fast on a metered plan. Test agents individually where you can, save full pipeline runs for validation, not iteration.
+
+> [!TIP]
+> Every full pipeline run calls four agents plus a knowledge base retrieval in one shot, that adds up fast on a metered plan. Test agents individually where you can, save full pipeline runs for validation, not iteration.
 
 ---
 
@@ -78,13 +102,14 @@ Any single agent in Lyzr Studio becomes a Managerial Agent the moment you attach
 > 6. If any section can't be verified, write 'Not found, needs manual verification' instead of guessing.
 > 7. Never invent numbers, names, or quotes.
 
-That step 5 clause about preserving citations wasn't in the first version. It's there because of a bug I'll walk through later, one that only shows up once you test what the Manager does with a worker's output, not just what the worker itself produces.
+That step 5 clause about preserving citations wasn't in the first version. It's there because of a bug that only shows up once you test what the Manager does with a worker's output, not just what the worker itself produces.
 
-- **Model:** gpt-5.4-mini. 
-- **Features:** Memory on (Lyzr Cognis, on by default, this lets you refine a brief with a follow-up in the same session). Responsible AI was left off, not by choice, it's plan-gated behind a paid tier on Community accounts. More on how I compensated for that below.
+- **Model:** gpt-5.4-mini.
+- **Features:** Memory on (Lyzr Cognis, on by default, this lets you refine a brief with a follow-up in the same session). Responsible AI was left off, not by choice, it's plan-gated behind a paid tier on Community accounts.
 - Leave Knowledge and Tools empty on the Manager. Those live on the workers.
 
 <img width="1512" height="825" alt="Manager Agent" src="https://github.com/user-attachments/assets/6b1ff45e-d695-4828-a05f-adf503346eee" />
+
 ---
 
 ## Part 2: Company Intelligence Agent
@@ -100,14 +125,15 @@ Built as a native child via +Agent under the Manager.
 **Instructions**
 > Use your connected web-search tool for every fact. Name the source for each claim. If something can't be confirmed, write 'Not publicly available.' Never fabricate financial figures, headcounts, or executive names. Only state a specific number (headcount, revenue, funding, a date tied to a figure) if it appears directly in your tool's retrieved results for this exact query, never from memory or general knowledge. If the retrieved results don't contain a number for something, say 'not found in retrieved results' instead of stating one.
 
-That second half of the instructions, the part about only stating a number that appears verbatim in the retrieved results, is the result of catching this agent hallucinate a headcount twice before it got it right. That's in the testing section.
+That second half of the instructions, the part about only stating a number that appears verbatim in the retrieved results, is the result of catching this agent hallucinate a headcount before it got it right.
 
-- **Tools:** `composio_search`. 
+- **Tools:** `composio_search`.
 - **Model:** gpt-5.4-mini, a fast, cheap model is fine here because the accuracy comes from the search tool doing the grounding, not from the model's own reasoning. Save your strongest model for the agents doing actual synthesis.
 - **Managerial Context** (the field that tells the Manager when to call this agent, separate from the agent's own instructions):
 > Call this first for any target company. Give it the company name or domain. It returns sourced firmographics and recent tech/AI news, nothing else. Always call it before Positioning & Brief Writer Agent.
 
 <img width="1512" height="827" alt="Agent1" src="https://github.com/user-attachments/assets/73c6ddb3-0ab4-4769-97ce-c95abe889c41" />
+
 ---
 
 ## Part 3: Signal & Stakeholder Mapping Agent
@@ -121,13 +147,14 @@ That second half of the instructions, the part about only stating a number that 
 **Instructions**
 > Use your connected web-search tool for every claim. Name the source for each one. If something can't be confirmed, write 'Not publicly available.' Never invent named individuals, titles, or contact details, only report a named person if their name and title appear directly in your tool's retrieved results. Only state a specific fact (a hiring signal, a title, a team size, a date) if it appears directly in the retrieved results for this exact query, never from memory or general knowledge.
 
-- **Tools:** same `composio_search` connector. 
+- **Tools:** same `composio_search` connector.
 - **Managerial Context:**
 > Call this for the same target company, either right after or in parallel with Company Intelligence Agent. It returns public buying signals and the likely stakeholders or named evaluators at that company. Always call it before Positioning & Brief Writer Agent.
 
 Tested against HDFC Bank and Axis Bank, two companies with very different press coverage density. On Axis Bank it correctly named a real, verifiable Chief AI Officer and CISO, both confirmed independently outside the platform. On HDFC Bank in a separate run, it correctly stayed generic and said stakeholder names weren't confirmed, because that run's search results didn't surface the same quality of named data. Same instructions, two different but both honest outcomes. That's the behavior you want: precision when the data supports it, restraint when it doesn't.
 
 <img width="1512" height="826" alt="Agent2" src="https://github.com/user-attachments/assets/04a86835-85c6-437a-b345-2b77d56d981d" />
+
 ---
 
 ## Part 4: The Knowledge Base
@@ -150,11 +177,13 @@ This is the part that determines whether the Positioning agent is actually usefu
 
 I split these into two groups on purpose. The first four cover what Lyzr Studio and the Manager Agent pattern actually are, general platform grounding. The last four are banking-specific, because both of my test accounts are banks, and that's where the real leverage is: a real customer case study (OCR, verification, managerial coordination, Temenos integration, SOC2/ISO27001/HIPAA), a full banking playbook with named pre-built agents (Regulatory Compliance Audit Agent, Cash Flow Prediction Agent, Invoice Payment Agent, Payment Reconciliation Agent, and more), and product pages describing Lyzr's actual banking-specific architecture.
 
-**Why Add Website and not Add Live Source:** Live Source is a recurring crawler, by default it'll crawl three link-levels deep across an entire doc section and re-sync daily. Pointed at `docs.lyzr.ai/enterprise/`, that means indexing far more than the four pages I actually wanted, and re-embedding it every 24 hours whether it changed or not. Add Website with a single URL gets exactly the page I chose, once. Worth knowing before you start, since the two options look similar but behave very differently at scale.
+> [!TIP]
+> **Add Website, not Add Live Source.** Live Source is a recurring crawler, by default it'll crawl three link-levels deep across an entire doc section and re-sync daily. Pointed at `docs.lyzr.ai/enterprise/`, that means indexing far more than the four pages I actually wanted, and re-embedding it every 24 hours whether it changed or not. Add Website with a single URL gets exactly the page you chose, once. The two options look similar but behave very differently at scale.
 
 **Retrieval type on the consuming agent:** Basic. There's only one KB, so One Shot's multi-KB planning step and Agentic's ReAct tool loop both add cost with nothing to plan across.
 
 <img width="1512" height="827" alt="kb" src="https://github.com/user-attachments/assets/7c60b28e-a913-4d07-ba38-5d005fe55cf8" />
+
 ---
 
 ## Part 5: Positioning & Brief Writer Agent
@@ -170,12 +199,13 @@ This is the agent the whole build exists to support, and it's the one that broke
 **Instructions**
 > Only reference Lyzr capabilities, products, or case studies that are directly retrieved from the attached Knowledge Base for this query, never from general knowledge or assumption, even if it sounds plausible or matches a real product name you know from elsewhere, competitor products in particular. End every capability you cite with a source tag using ONLY one of these exact names, nothing else is valid: (Source: Banking Playbook), (Source: Japanese Bank Case Study), (Source: Customer Service Agent Page), (Source: Customer Service Blog), (Source: Enterprise Intro), (Source: Manager Agent Docs), (Source: Studio Components Docs), (Source: Getting Started Docs). If you cannot match a capability to the retrieved content from one of these exact eight sources, do not name it, do not describe it, and do not cite it, say the pain point has no confirmed Lyzr capability match instead. When the Knowledge Base does return relevant content, be as specific as possible: name the exact agent, module, or product term it uses (for example 'Regulatory Compliance Audit Agent,' 'AgentMesh,' 'Cross-border Payment Optimization Agent'), don't flatten it into a generic paraphrase like 'workflow orchestration.'
 
-- **Knowledge:** `lyzr_product_positioning_kb`, retrieval type Basic. 
-- **Model:** same tier as the Manager, this agent maps pain points to capabilities, that's judgment, not extraction, and it deserves the stronger model. 
+- **Knowledge:** `lyzr_product_positioning_kb`, retrieval type Basic.
+- **Model:** same tier as the Manager, this agent maps pain points to capabilities, that's judgment, not extraction, and it deserves the stronger model.
 - **Managerial Context:**
 > Call this last. Pass it the full outputs from both Company Intelligence Agent and Signal & Stakeholder Mapping Agent, it needs both to map pain points and draft the outreach angle. Never call it first or with only one of the two prior outputs.
 
 <img width="1512" height="827" alt="Agent3" src="https://github.com/user-attachments/assets/9f46d49a-1313-4c30-80b0-59196457d07f" />
+
 ---
 
 ## Part 6: Wiring the Manager
@@ -188,23 +218,24 @@ Set the Managerial Context field on each child (shown above), this is what tells
 
 ---
 
-## Deploying and Sharing It
+## Part 7: Deploying and Sharing It
 
 Every agent in Lyzr Studio deploys automatically behind a REST API endpoint the moment it's created, no separate hosting step needed. The Deploy tab gives you the exact cURL command to call it directly.
 
-Don't hand that cURL to anyone outside your own use. The `x-api-key` in it is tied to your account and your credits. Anyone who has it can run inference against your account, not just this one agent.
+> [!WARNING]
+> Don't hand that cURL to anyone outside your own use. The `x-api-key` in it is tied to your account and your credits. Anyone who has it can run inference against your account, not just this one agent.
 
 For giving someone else access, Deploy has two separate paths, and they do different things.
 
 - **Share** invites specific people by email to one specific agent, without publishing it anywhere or adding them to your organization. This is the right tool for letting one person try it.
-
 - **Publish** launches the agent as an app with a visibility choice: Team, visible only inside your own Lyzr organization, or App Store users, public and listed on Lyzr's marketplace for anyone to find and run. Publishing also asks for an app name, description, welcome message, category, industry, and function, all shown to whoever opens it.
 
-One thing worth knowing before you publish: if you have a Manager with worker agents underneath it, publish the Manager, not one of the workers. Publishing a single worker in isolation only exposes that one piece, not the orchestration that's the actual point of the build.
+> [!TIP]
+> If you have a Manager with worker agents underneath it, publish the Manager, not one of the workers. Publishing a single worker in isolation only exposes that one piece, not the orchestration that's the actual point of the build.
+>
+> App names also need to be unique across the platform. A generic name like "Enterprise Prospect Research Manager" may already be taken by someone else's agent. Appending your own name resolves it without a rewrite.
 
 <img width="1512" height="827" alt="Deploy" src="https://github.com/user-attachments/assets/6a545acd-3c07-4a6f-a315-3ea114534d93" />
-
-App names need to be unique across the platform. A generic name like "Enterprise Prospect Research Manager" may already be taken by someone else's agent. Appending your own name resolves it without a rewrite.
 
 ---
 
@@ -235,7 +266,7 @@ Both claims checked against the actual playbook content: verbatim accurate.
 
 ## Where This Goes Next
 
-- **Upgrade retrieval type to Agentic** if Bug 4's thin-match rate becomes a real problem at higher usage, trading credit cost for retrieval robustness.
+- **Upgrade retrieval type to Agentic** if thin or inconsistent retrieval matches become a real problem at higher usage, trading credit cost for retrieval robustness.
 - **Add an ICP knowledge base** alongside the product KB, so the Positioning agent can weigh fit against Lyzr's actual ideal-customer profile, not just capability match.
 - **Extend past banking.** The architecture is industry-agnostic, only the KB sources are banking-specific right now. Swapping in insurance or healthcare sources would need no changes to any agent's Role, Goal, or core Instructions.
 - **Schedule it** against a real target-account list using the Manager's Automation tab, not built here, but the delegation logic doesn't change.
