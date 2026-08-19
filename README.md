@@ -4,9 +4,9 @@
 
 *Four agents. One Manager. One Knowledge Base. Built and tested on Lyzr Studio.*
 
-**[Watch the walkthrough →](https://drive.google.com/file/d/1Et9dc7afDUplwErb9Ix5iFzWBvZ0iXBy/view?usp=sharing)**
+**[Watch the walkthrough →](https://drive.google.com/file/d/1Lt3jeKML7RT-wYUsYfBeMyLwr3UZ68ud/view?usp=sharing)**
 
-**[Try it live on Lyzr Studio →](https://drive.google.com/file/d/1Lt3jeKML7RT-wYUsYfBeMyLwr3UZ68ud/view?usp=sharing)**
+**[Try it live on Lyzr Studio →](https://studio.lyzr.ai/create-new-agent/6a84a4e6d468c8c0411988c7?tab=playground&public=true)**
 
 ---
 
